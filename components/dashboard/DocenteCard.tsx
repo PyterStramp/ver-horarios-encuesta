@@ -1,9 +1,11 @@
 // src/components/dashboard/DocenteCard.tsx
 'use client';
 
-import { useState } from 'react';
 import { DocenteActivo } from '@/types/horarios';
 import { useEncuestas } from '@/contexts/EncuestasContext';
+import { useGeolocation } from '@/hooks/useGeolocation';
+import { getEdificioLocation } from '@/data/edificios';
+import { calculateDistance, formatDistance, getProximityLevel } from '@/utils/geolocation';
 
 interface DocenteCardProps {
   docente: DocenteActivo;
@@ -12,8 +14,16 @@ interface DocenteCardProps {
 
 export default function DocenteCard({ docente, tipo }: DocenteCardProps) {
   const { isEncuestado, marcarComoEncuestado, desmarcarEncuestado } = useEncuestas();
-  
+  const { position } = useGeolocation();
+
   const yaEncuestado = isEncuestado(docente.docente);
+
+  const edificioLocation = getEdificioLocation(docente.edificio);
+  const distancia = position && edificioLocation 
+    ? calculateDistance(position, edificioLocation)
+    : null;
+
+  const proximityLevel = distancia ? getProximityLevel(distancia) : null;  
 
   const handleMarcarEncuestado = () => {
     if (yaEncuestado) {
@@ -24,13 +34,50 @@ export default function DocenteCard({ docente, tipo }: DocenteCardProps) {
   };
 
   const getCardClass = () => {
+    let baseClass = 'border-2 rounded-lg p-3 transition-all duration-200';
+    
     if (yaEncuestado) {
-      return 'bg-gray-100 border-gray-300';
+      return `${baseClass} bg-gray-100 border-gray-300`;
     }
-    return tipo === 'activo' 
-      ? 'bg-white border-green-300 shadow-md' 
-      : 'bg-white border-blue-300 shadow-md';
+
+    // Añadir indicador visual de proximidad
+    if (proximityLevel) {
+      const proximityBorder = {
+        'muy-cerca': 'border-green-400 shadow-lg shadow-green-100',
+        'cerca': 'border-blue-400 shadow-md shadow-blue-100',
+        'medio': 'border-yellow-400 shadow-md shadow-yellow-100',
+        'lejos': 'border-gray-400 shadow-md',
+      }[proximityLevel];
+
+      return `${baseClass} bg-white ${proximityBorder}`;
+    }
+
+    return `${baseClass} bg-white ${
+      tipo === 'activo' 
+        ? 'border-green-300 shadow-md' 
+        : 'border-blue-300 shadow-md'
+    }`;
   };
+
+
+  const getDistanceBadge = () => {
+    if (!distancia) return null;
+
+    const badgeColors = {
+      'muy-cerca': 'bg-green-100 text-green-800',
+      'cerca': 'bg-blue-100 text-blue-800',
+      'medio': 'bg-yellow-100 text-yellow-800',
+      'lejos': 'bg-gray-100 text-gray-800',
+    };
+
+    return (
+      <span className={`text-xs px-2 py-1 rounded-full ${
+        badgeColors[proximityLevel!]
+      }`}>
+        📍 {formatDistance(distancia)}
+      </span>
+    );
+  };  
 
   return (
     <div className={`border-2 rounded-lg p-3 ${getCardClass()} transition-all duration-200`}>
@@ -54,6 +101,8 @@ export default function DocenteCard({ docente, tipo }: DocenteCardProps) {
           }`}>
             {tipo === 'activo' ? 'AHORA' : 'PRÓXIMO'}
           </span>
+
+          {getDistanceBadge()}
         </div>
       </div>
       

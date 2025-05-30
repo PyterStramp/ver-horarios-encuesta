@@ -5,6 +5,10 @@ import { useState } from 'react';
 import { BloqueDocentes, DocenteActivo } from '@/types/horarios';
 import { useEncuestas } from '@/contexts/EncuestasContext';
 import DocenteCard from './DocenteCard';
+import { useGeolocation } from '@/hooks/useGeolocation';
+import { getEdificioLocation } from '@/data/edificios';
+import { calculateDistance } from '@/utils/geolocation';
+import GeolocationControl from './GeolocationControl';
 
 interface BloqueHorarioProps {
   bloques: BloqueDocentes[];
@@ -16,8 +20,11 @@ export default function BloqueHorario({ bloques, tipo, titulo }: BloqueHorarioPr
   const { isEncuestado } = useEncuestas();
   const [paginaActual, setPaginaActual] = useState(1);
   const [filtroActual, setFiltroActual] = useState<'todos' | 'pendientes' | 'encuestados'>('todos');
+
+  const { position } = useGeolocation();
+  const [locationEnabled, setLocationEnabled] = useState(false);
   
-  const DOCENTES_POR_PAGINA = 5;
+  const DOCENTES_POR_PAGINA = 4;
 
   if (bloques.length === 0) {
     return null;
@@ -29,12 +36,27 @@ export default function BloqueHorario({ bloques, tipo, titulo }: BloqueHorarioPr
       const aEncuestado = isEncuestado(a.docente);
       const bEncuestado = isEncuestado(b.docente);
       
-      // Pendientes primero (false < true)
+      // Primero: pendientes antes que encuestados
       if (aEncuestado !== bEncuestado) {
         return aEncuestado ? 1 : -1;
       }
       
-      // Si ambos tienen el mismo estado, ordenar alfabéticamente
+      // Segundo: si tenemos ubicación, ordenar por proximidad
+      if (position && locationEnabled) {
+        const aLocation = getEdificioLocation(a.edificio);
+        const bLocation = getEdificioLocation(b.edificio);
+        
+        if (aLocation && bLocation) {
+          const aDistance = calculateDistance(position, aLocation);
+          const bDistance = calculateDistance(position, bLocation);
+          
+          if (Math.abs(aDistance - bDistance) > 0.01) { // Diferencia significativa
+            return aDistance - bDistance;
+          }
+        }
+      }
+      
+      // Tercero: ordenar alfabéticamente
       return a.docente.localeCompare(b.docente);
     });
   };
@@ -86,6 +108,11 @@ export default function BloqueHorario({ bloques, tipo, titulo }: BloqueHorarioPr
       <h2 className={`text-2xl font-bold mb-4 ${getHeaderColor()}`}>
         {getHeaderIcon()} {titulo}
       </h2>
+
+      {/* Control de geolocalización */}
+      <div className="mb-4">
+        <GeolocationControl onLocationChange={setLocationEnabled} />
+      </div>
       
       {/* Controles de filtro y estadísticas */}
       <div className="bg-white rounded-lg shadow-md p-4 mb-4">
@@ -143,6 +170,9 @@ export default function BloqueHorario({ bloques, tipo, titulo }: BloqueHorarioPr
         {/* Info de filtro actual */}
         <div className="mt-3 text-sm text-gray-500">
           Mostrando {docentesFiltrados.length} docentes
+          {locationEnabled && position && (
+            <span className="text-green-600 ml-2">• Ordenado por proximidad</span>
+          )}
           {filtroActual !== 'todos' && ` (filtrado por: ${filtroActual})`}
           {docentesFiltrados.length > DOCENTES_POR_PAGINA && ` - Página ${paginaActual} de ${totalPaginas}`}
         </div>
