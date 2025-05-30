@@ -1,9 +1,11 @@
 // src/components/dashboard/TimeHeader.tsx
+import { useState, useEffect } from "react";
 interface TimeHeaderProps {
   currentTime: Date;
 }
 
 export default function TimeHeader({ currentTime }: TimeHeaderProps) {
+  const [isMounted, setIsMounted] = useState(false);
   const formatTime = (date: Date) => {
     return date.toLocaleTimeString('es-CO', {
       hour: '2-digit',
@@ -20,6 +22,14 @@ export default function TimeHeader({ currentTime }: TimeHeaderProps) {
       day: 'numeric'
     });
   };
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  if (!isMounted) {
+    return null;
+  }
 
   return (
     <div className="bg-white rounded-lg shadow-md p-6 mb-6">

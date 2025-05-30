@@ -60,6 +60,9 @@ export class DocenteMatcher {
       // Verificar si el docente está contenido en el texto
       if (this.contieneDocente(textoNormalizado, docenteNormalizado)) {
         return docente;
+        // Por si no lo detecta con la función
+      } else if (docente===textoPosibleDocente) {
+        return docente;
       }
     }
 

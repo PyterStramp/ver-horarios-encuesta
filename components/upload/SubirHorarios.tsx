@@ -13,6 +13,7 @@ export default function SubirHorarios({ onFileUpload, loading }: SubirHorariosPr
   const [dragActive, setDragActive] = useState(false);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    e.preventDefault();
     const file = e.target.files?.[0];
     if (file && file.type === 'text/plain') {
       onFileUpload(file);

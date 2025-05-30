@@ -1,186 +1,221 @@
 // src/components/dashboard/BloqueHorario.tsx
 "use client";
 
-import { BloqueDocentes, DocenteActivo } from "@/types/horarios";
-import DocenteCard from "./DocenteCard";
-import { useEncuestas } from "@/contexts/EncuestasContext";
+import { useState } from 'react';
+import { BloqueDocentes, DocenteActivo } from '@/types/horarios';
+import { useEncuestas } from '@/contexts/EncuestasContext';
+import DocenteCard from './DocenteCard';
 
 interface BloqueHorarioProps {
   bloques: BloqueDocentes[];
-  tipo: "activo" | "proximo";
+  tipo: 'activo' | 'proximo';
   titulo: string;
 }
 
-export default function BloqueHorario({
-  bloques,
-  tipo,
-  titulo,
-}: BloqueHorarioProps) {
+export default function BloqueHorario({ bloques, tipo, titulo }: BloqueHorarioProps) {
   const { isEncuestado } = useEncuestas();
+  const [paginaActual, setPaginaActual] = useState(1);
+  const [filtroActual, setFiltroActual] = useState<'todos' | 'pendientes' | 'encuestados'>('todos');
+  
+  const DOCENTES_POR_PAGINA = 5;
+
   if (bloques.length === 0) {
     return null;
   }
 
+  // Función para ordenar docentes: pendientes primero
+  const ordenarDocentes = (docentes: DocenteActivo[]) => {
+    return [...docentes].sort((a, b) => {
+      const aEncuestado = isEncuestado(a.docente);
+      const bEncuestado = isEncuestado(b.docente);
+      
+      // Pendientes primero (false < true)
+      if (aEncuestado !== bEncuestado) {
+        return aEncuestado ? 1 : -1;
+      }
+      
+      // Si ambos tienen el mismo estado, ordenar alfabéticamente
+      return a.docente.localeCompare(b.docente);
+    });
+  };
+
+  // Filtrar docentes según el filtro actual
+  const filtrarDocentes = (docentes: DocenteActivo[]) => {
+    switch (filtroActual) {
+      case 'pendientes':
+        return docentes.filter(d => !isEncuestado(d.docente));
+      case 'encuestados':
+        return docentes.filter(d => isEncuestado(d.docente));
+      default:
+        return docentes;
+    }
+  };
+
+  // Procesar todos los docentes de todos los bloques
+  const todosLosDocentes = bloques.flatMap(bloque => bloque.docentes);
+  const docentesOrdenados = ordenarDocentes(todosLosDocentes);
+  const docentesFiltrados = filtrarDocentes(docentesOrdenados);
+  
+  // Paginación
+  const totalPaginas = Math.ceil(docentesFiltrados.length / DOCENTES_POR_PAGINA);
+  const indiceInicio = (paginaActual - 1) * DOCENTES_POR_PAGINA;
+  const indiceFin = indiceInicio + DOCENTES_POR_PAGINA;
+  const docentesPaginados = docentesFiltrados.slice(indiceInicio, indiceFin);
+
+  // Resetear página cuando cambia el filtro
+  const handleFiltroChange = (nuevoFiltro: typeof filtroActual) => {
+    setFiltroActual(nuevoFiltro);
+    setPaginaActual(1);
+  };
+
   const getHeaderIcon = () => {
-    return tipo === "activo" ? "🟢" : "🔵";
+    return tipo === 'activo' ? '🟢' : '🔵';
   };
 
   const getHeaderColor = () => {
-    return tipo === "activo" ? "text-green-800" : "text-blue-800";
+    return tipo === 'activo' ? 'text-green-800' : 'text-blue-800';
   };
 
-  // Función para obtener los edificios únicos en un bloque
-  const getEdificiosUnicos = (docentes: DocenteActivo[]) => {
-    const edificios = [
-      ...new Set(docentes.map((d) => d.edificio).filter(Boolean)),
-    ];
-    return edificios.length > 0 ? edificios : ["N/A"];
-  };
-
-  // Función para obtener el día actual (ya que BloqueDocentes no tiene dia)
-  const getDiaActual = () => {
-    const dias = [
-      "DOMINGO",
-      "LUNES",
-      "MARTES",
-      "MIERCOLES",
-      "JUEVES",
-      "VIERNES",
-      "SABADO",
-    ];
-    return dias[new Date().getDay()];
-  };
+  // Estadísticas
+  const totalDocentes = todosLosDocentes.length;
+  const docentesEncuestados = todosLosDocentes.filter(d => isEncuestado(d.docente)).length;
+  const docentesPendientes = totalDocentes - docentesEncuestados;
 
   return (
     <div className="mb-8">
       <h2 className={`text-2xl font-bold mb-4 ${getHeaderColor()}`}>
         {getHeaderIcon()} {titulo}
       </h2>
-
-      <div className="space-y-6">
-        {bloques.map((bloque, index) => (
-          <div key={index} className="bg-white rounded-lg shadow-md p-4">
-            {/* Header del bloque */}
-            <div className="border-b border-gray-200 pb-3 mb-4">
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-                <div className="flex items-center space-x-4">
-                  <div
-                    className={`px-3 py-1 rounded-full text-sm font-medium ${
-                      tipo === "activo"
-                        ? "bg-green-100 text-green-800"
-                        : "bg-blue-100 text-blue-800"
-                    }`}
-                  >
-                    ⏰ {bloque.horario}
-                  </div>
-
-                  <div className="text-sm text-gray-600">
-                    📅 {getDiaActual()}
-                  </div>
-                </div>
-
-                <div className="mt-2 md:mt-0 flex items-center space-x-4">
-                  <span className="text-sm text-gray-500">
-                    👥 {bloque.docentes.length} docente
-                    {bloque.docentes.length !== 1 ? "s" : ""}
-                  </span>
-
-                  <span className="text-sm text-gray-500">
-                    🏢 {getEdificiosUnicos(bloque.docentes).join(", ")}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Grid de docentes */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {bloque.docentes.map((docente, docenteIndex) => (
-                <DocenteCard key={docenteIndex} docente={docente} tipo={tipo} />
-              ))}
-            </div>
-
-            {/* Footer del bloque con estadísticas actualizadas */}
-            <div className="mt-4 pt-3 border-t border-gray-100">
-              <div className="flex flex-wrap gap-4 text-xs text-gray-500">
-                <span>📊 Total: {bloque.docentes.length} docentes</span>
-                <span>
-                  ✅ Encuestados:{" "}
-                  {
-                    bloque.docentes.filter((d) => isEncuestado(d.docente))
-                      .length
-                  }
-                </span>
-                <span>
-                  📋 Pendientes:{" "}
-                  {
-                    bloque.docentes.filter((d) => !isEncuestado(d.docente))
-                      .length
-                  }
-                </span>
-                <span>
-                  📚 Asignaturas:{" "}
-                  {
-                    [...new Set(bloque.docentes.map((d) => d.asignatura))]
-                      .length
-                  }
-                </span>
-                <span>
-                  🚪 Salones:{" "}
-                  {[...new Set(bloque.docentes.map((d) => d.salon))].length}
-                </span>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Resumen total actualizado */}
-      <div className="mt-4 bg-gray-50 rounded-lg p-4">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-          <div>
-            <div
-              className={`text-xl font-bold ${
-                tipo === "activo" ? "text-green-600" : "text-blue-600"
+      
+      {/* Controles de filtro y estadísticas */}
+      <div className="bg-white rounded-lg shadow-md p-4 mb-4">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          {/* Filtros */}
+          <div className="flex gap-2">
+            <button
+              onClick={() => handleFiltroChange('todos')}
+              className={`px-3 py-1 rounded-full text-sm transition-colors ${
+                filtroActual === 'todos'
+                  ? 'bg-blue-500 text-white'
+                  : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
               }`}
             >
-              {bloques.length}
-            </div>
-            <div className="text-xs text-gray-600">Bloques Horarios</div>
+              👥 Todos ({totalDocentes})
+            </button>
+            <button
+              onClick={() => handleFiltroChange('pendientes')}
+              className={`px-3 py-1 rounded-full text-sm transition-colors ${
+                filtroActual === 'pendientes'
+                  ? 'bg-red-500 text-white'
+                  : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
+              }`}
+            >
+              📋 Pendientes ({docentesPendientes})
+            </button>
+            <button
+              onClick={() => handleFiltroChange('encuestados')}
+              className={`px-3 py-1 rounded-full text-sm transition-colors ${
+                filtroActual === 'encuestados'
+                  ? 'bg-green-500 text-white'
+                  : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
+              }`}
+            >
+              ✅ Encuestados ({docentesEncuestados})
+            </button>
           </div>
 
-          <div>
-            <div className="text-xl font-bold text-purple-600">
-              {bloques.reduce((acc, bloque) => acc + bloque.docentes.length, 0)}
+          {/* Progreso */}
+          <div className="flex items-center gap-3">
+            <div className="text-sm text-gray-600">
+              Progreso: {totalDocentes > 0 ? Math.round((docentesEncuestados / totalDocentes) * 100) : 0}%
             </div>
-            <div className="text-xs text-gray-600">Total Docentes</div>
-          </div>
-
-          <div>
-            <div className="text-xl font-bold text-green-600">
-              {bloques.reduce(
-                (acc, bloque) =>
-                  acc +
-                  bloque.docentes.filter((d) => isEncuestado(d.docente)).length,
-                0
-              )}
+            <div className="w-20 bg-gray-200 rounded-full h-2">
+              <div 
+                className="bg-green-500 h-2 rounded-full transition-all duration-300"
+                style={{ 
+                  width: `${totalDocentes > 0 ? (docentesEncuestados / totalDocentes) * 100 : 0}%` 
+                }}
+              ></div>
             </div>
-            <div className="text-xs text-gray-600">Encuestados</div>
-          </div>
-
-          <div>
-            <div className="text-xl font-bold text-red-600">
-              {bloques.reduce(
-                (acc, bloque) =>
-                  acc +
-                  bloque.docentes.filter((d) => !isEncuestado(d.docente))
-                    .length,
-                0
-              )}
-            </div>
-            <div className="text-xs text-gray-600">Pendientes</div>
           </div>
         </div>
+
+        {/* Info de filtro actual */}
+        <div className="mt-3 text-sm text-gray-500">
+          Mostrando {docentesFiltrados.length} docentes
+          {filtroActual !== 'todos' && ` (filtrado por: ${filtroActual})`}
+          {docentesFiltrados.length > DOCENTES_POR_PAGINA && ` - Página ${paginaActual} de ${totalPaginas}`}
+        </div>
       </div>
+
+      {/* Grid de docentes */}
+      {docentesPaginados.length > 0 ? (
+        <div className="bg-white rounded-lg shadow-md p-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {docentesPaginados.map((docente, index) => (
+              <DocenteCard
+                key={`${docente.docente}-${docente.asignatura}-${index}`}
+                docente={docente}
+                tipo={tipo}
+              />
+            ))}
+          </div>
+
+          {/* Paginación */}
+          {totalPaginas > 1 && (
+            <div className="mt-6 flex justify-center items-center gap-2">
+              <button
+                onClick={() => setPaginaActual(Math.max(1, paginaActual - 1))}
+                disabled={paginaActual === 1}
+                className="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+              >
+                ← Anterior
+              </button>
+              
+              <div className="flex gap-1">
+                {Array.from({ length: totalPaginas }, (_, i) => i + 1).map(pagina => (
+                  <button
+                    key={pagina}
+                    onClick={() => setPaginaActual(pagina)}
+                    className={`px-3 py-1 rounded text-sm transition-colors ${
+                      pagina === paginaActual
+                        ? 'bg-blue-500 text-white'
+                        : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
+                    }`}
+                  >
+                    {pagina}
+                  </button>
+                ))}
+              </div>
+              
+              <button
+                onClick={() => setPaginaActual(Math.min(totalPaginas, paginaActual + 1))}
+                disabled={paginaActual === totalPaginas}
+                className="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+              >
+                Siguiente →
+              </button>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="bg-white rounded-lg shadow-md p-8 text-center">
+          <div className="text-4xl mb-2">
+            {filtroActual === 'pendientes' ? '📋' : filtroActual === 'encuestados' ? '✅' : '👥'}
+          </div>
+          <h3 className="text-lg font-semibold mb-2">
+            No hay docentes {filtroActual === 'todos' ? '' : filtroActual}
+          </h3>
+          <p className="text-gray-600">
+            {filtroActual === 'encuestados' 
+              ? 'Aún no has encuestado a ningún docente'
+              : filtroActual === 'pendientes'
+                ? '¡Excelente! Todos los docentes han sido encuestados'
+                : 'No se encontraron docentes para mostrar'
+            }
+          </p>
+        </div>
+      )}
     </div>
   );
 }
