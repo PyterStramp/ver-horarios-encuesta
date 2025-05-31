@@ -10,7 +10,7 @@ import {
 import { HorariosParser } from "@/lib/parser/horarios-parser";
 import { HorariosQueries } from "@/lib/queries/horarios-queries";
 import TimeHeader from "./TimeHeader";
-import BloqueHorario from './BloqueHorario';
+import BloqueHorario from "./BloqueHorario";
 import SubirHorarios from "../upload/SubirHorarios";
 import SubirDocentes from "../upload/SubirDocentes";
 
@@ -66,7 +66,6 @@ export default function DashboardLocalizador() {
 
       localStorage.setItem("docentes-lista", JSON.stringify(docentes));
       setDocentesCargados(true);
-
     } catch (error) {
       alert("Error al procesar la lista de docentes");
     } finally {
@@ -115,7 +114,6 @@ export default function DashboardLocalizador() {
           ),
         0
       );
-
     } catch (error) {
       alert("Error al procesar el archivo de horarios");
     } finally {
@@ -259,10 +257,10 @@ export default function DashboardLocalizador() {
         )}
 
         {/* Botón para recargar horarios */}
-        <div className="mt-8 flex flex-col sm:flex-row sm:justify-center sm:space-x-4 text-center space-y-4 sm:space-y-0">
+        <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-center sm:gap-4 text-center">
           <button
             onClick={() => setUniversidad(null)}
-            className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg mr-4 shadow-md transition duration-300"
+            className="w-full sm:w-auto bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-lg shadow-md text-lg transition duration-300"
           >
             📁 Cargar Nuevos Horarios
           </button>
@@ -272,7 +270,7 @@ export default function DashboardLocalizador() {
               setDocentesCargados(false);
               setUniversidad(null);
             }}
-            className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg shadow-md transition duration-300"
+            className="w-full sm:w-auto bg-red-500 hover:bg-red-600 text-white px-6 py-3 rounded-lg shadow-md text-lg transition duration-300"
           >
             🗑️ Limpiar Todo
           </button>

@@ -3,7 +3,7 @@
 
 import { DocenteActivo } from '@/types/horarios';
 import { useEncuestas } from '@/contexts/EncuestasContext';
-import { useGeolocation } from '@/hooks/useGeolocation';
+import { useGeolocation } from '@/contexts/GeolocationContext';;
 import { getEdificioLocation } from '@/data/edificios';
 import { calculateDistance, formatDistance, getProximityLevel } from '@/utils/geolocation';
 

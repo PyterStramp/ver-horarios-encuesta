@@ -1,5 +1,7 @@
-// src/hooks/useGeolocation.ts
-import { useState, useEffect } from 'react';
+// src/contexts/GeolocationContext.tsx
+'use client';
+
+import React, { createContext, useContext, useState, useEffect } from 'react';
 
 interface GeolocationState {
   position: {
@@ -11,25 +13,25 @@ interface GeolocationState {
   permissionDenied: boolean;
 }
 
-interface UseGeolocationOptions {
-  enableHighAccuracy?: boolean;
-  timeout?: number;
-  maximumAge?: number;
+interface GeolocationContextType extends GeolocationState {
+  requestLocation: () => void;
+  clearLocation: () => void;
+  hasLocation: boolean;
 }
 
-export function useGeolocation(options: UseGeolocationOptions = {}) {
+const GeolocationContext = createContext<GeolocationContextType | undefined>(undefined);
+
+interface GeolocationProviderProps {
+  children: React.ReactNode;
+}
+
+export function GeolocationProvider({ children }: GeolocationProviderProps) {
   const [state, setState] = useState<GeolocationState>({
     position: null,
     error: null,
     loading: false,
     permissionDenied: false,
   });
-
-  const {
-    enableHighAccuracy = true,
-    timeout = 10000,
-    maximumAge = 60000, // Cache por 1 minuto
-  } = options;
 
   const requestLocation = () => {
     if (!navigator.geolocation) {
@@ -45,22 +47,25 @@ export function useGeolocation(options: UseGeolocationOptions = {}) {
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
+        const newPosition = {
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+        };
+
         setState({
-          position: {
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude,
-          },
+          position: newPosition,
           error: null,
           loading: false,
           permissionDenied: false,
         });
 
-        // Guardar en localStorage para próximas sesiones
+        // Guardar en localStorage
         localStorage.setItem('user-location', JSON.stringify({
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
+          ...newPosition,
           timestamp: Date.now(),
         }));
+
+        console.log('🎯 Ubicación obtenida y guardada:', newPosition);
       },
       (error) => {
         let errorMessage = 'Error obteniendo ubicación';
@@ -85,16 +90,29 @@ export function useGeolocation(options: UseGeolocationOptions = {}) {
           loading: false,
           permissionDenied,
         });
+
+        console.error('❌ Error de geolocalización:', errorMessage);
       },
       {
-        enableHighAccuracy,
-        timeout,
-        maximumAge,
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 60000,
       }
     );
   };
 
-  // Intentar cargar ubicación guardada al iniciar
+  const clearLocation = () => {
+    setState({
+      position: null,
+      error: null,
+      loading: false,
+      permissionDenied: false,
+    });
+    localStorage.removeItem('user-location');
+    console.log('🗑️ Ubicación limpiada');
+  };
+
+  // Cargar ubicación guardada al iniciar
   useEffect(() => {
     const savedLocation = localStorage.getItem('user-location');
     if (savedLocation) {
@@ -111,27 +129,34 @@ export function useGeolocation(options: UseGeolocationOptions = {}) {
               longitude: parsed.longitude,
             },
           }));
+          console.log('📍 Ubicación cargada desde localStorage:', parsed);
+        } else {
+          console.log('⏰ Ubicación guardada muy antigua, solicitando nueva');
         }
       } catch (error) {
-        console.warn('Error cargando ubicación guardada:', error);
+        console.warn('⚠️ Error cargando ubicación guardada:', error);
       }
     }
   }, []);
 
-  const clearLocation = () => {
-    setState({
-      position: null,
-      error: null,
-      loading: false,
-      permissionDenied: false,
-    });
-    localStorage.removeItem('user-location');
-  };
+  const hasLocation = !!state.position;
 
-  return {
-    ...state,
-    requestLocation,
-    clearLocation,
-    hasLocation: !!state.position,
-  };
+  return (
+    <GeolocationContext.Provider value={{
+      ...state,
+      requestLocation,
+      clearLocation,
+      hasLocation,
+    }}>
+      {children}
+    </GeolocationContext.Provider>
+  );
+}
+
+export function useGeolocation() {
+  const context = useContext(GeolocationContext);
+  if (context === undefined) {
+    throw new Error('useGeolocation debe ser usado dentro de un GeolocationProvider');
+  }
+  return context;
 }
