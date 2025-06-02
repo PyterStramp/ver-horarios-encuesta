@@ -13,11 +13,10 @@ import TimeHeader from "./TimeHeader";
 import BloqueHorario from "./BloqueHorario";
 import SubirHorarios from "../upload/SubirHorarios";
 import SubirDocentes from "../upload/SubirDocentes";
+import { useUniversidad } from '@/contexts/UniversidadContext';
 
 export default function DashboardLocalizador() {
-  const [universidad, setUniversidad] = useState<HorarioUniversidad | null>(
-    null
-  );
+  const { universidad, setUniversidad } = useUniversidad();
   const [currentTime, setCurrentTime] = useState(new Date());
   const [docentesActivos, setDocentesActivos] = useState<BloqueDocentes[]>([]);
   const [proximosDocentes, setProximosDocentes] = useState<BloqueDocentes[]>(

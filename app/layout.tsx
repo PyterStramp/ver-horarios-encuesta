@@ -3,7 +3,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
 import { EncuestasProvider } from "@/contexts/EncuestasContext";
-import { GeolocationProvider } from '../contexts/GeolocationContext';
+import { GeolocationProvider } from '@/contexts/GeolocationContext';
+import { UniversidadProvider } from '@/contexts/UniversidadContext';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -30,9 +31,13 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <GeolocationProvider>
-            <EncuestasProvider>{children}</EncuestasProvider>
-        </GeolocationProvider>
+        <UniversidadProvider>
+          <GeolocationProvider>
+            <EncuestasProvider>
+              {children}
+            </EncuestasProvider>
+          </GeolocationProvider>
+        </UniversidadProvider>
       </body>
     </html>
   );

@@ -64,8 +64,6 @@ export function GeolocationProvider({ children }: GeolocationProviderProps) {
           ...newPosition,
           timestamp: Date.now(),
         }));
-
-        console.log('🎯 Ubicación obtenida y guardada:', newPosition);
       },
       (error) => {
         let errorMessage = 'Error obteniendo ubicación';
@@ -109,7 +107,6 @@ export function GeolocationProvider({ children }: GeolocationProviderProps) {
       permissionDenied: false,
     });
     localStorage.removeItem('user-location');
-    console.log('🗑️ Ubicación limpiada');
   };
 
   // Cargar ubicación guardada al iniciar
@@ -129,7 +126,6 @@ export function GeolocationProvider({ children }: GeolocationProviderProps) {
               longitude: parsed.longitude,
             },
           }));
-          console.log('📍 Ubicación cargada desde localStorage:', parsed);
         } else {
           console.log('⏰ Ubicación guardada muy antigua, solicitando nueva');
         }
