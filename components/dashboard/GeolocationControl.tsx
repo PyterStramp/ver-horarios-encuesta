@@ -21,12 +21,6 @@ export default function GeolocationControl({ onLocationChange }: GeolocationCont
 
   useEffect(() => {
     onLocationChange(hasLocation);
-    console.log(
-      "🔄 GeolocationControl - hasLocation cambió a:",
-      hasLocation,
-      "position:",
-      position
-    );
   }, [hasLocation, position, onLocationChange]);
 
   if (permissionDenied) {

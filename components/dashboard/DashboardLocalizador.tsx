@@ -13,10 +13,11 @@ import TimeHeader from "./TimeHeader";
 import BloqueHorario from "./BloqueHorario";
 import SubirHorarios from "../upload/SubirHorarios";
 import SubirDocentes from "../upload/SubirDocentes";
-import { useUniversidad } from '@/contexts/UniversidadContext';
+import { useUniversidad } from "@/contexts/UniversidadContext";
+import ConfirmationModal from "../common/ConfirmationModal";
 
 export default function DashboardLocalizador() {
-  const { universidad, setUniversidad } = useUniversidad();
+  const { universidad, setUniversidad, clearAllData, storageInfo } = useUniversidad();
   const [currentTime, setCurrentTime] = useState(new Date());
   const [docentesActivos, setDocentesActivos] = useState<BloqueDocentes[]>([]);
   const [proximosDocentes, setProximosDocentes] = useState<BloqueDocentes[]>(
@@ -25,6 +26,7 @@ export default function DashboardLocalizador() {
   const [loading, setLoading] = useState(false);
   const [docentesLoading, setDocentesLoading] = useState(false);
   const [docentesCargados, setDocentesCargados] = useState(false);
+  const [showClearModal, setShowClearModal] = useState(false);
 
   // Actualizar tiempo cada minuto
   useEffect(() => {
@@ -51,6 +53,11 @@ export default function DashboardLocalizador() {
       setProximosDocentes(HorariosQueries.agruparPorBloques(proximos));
     }
   }, [universidad, currentTime]);
+
+  const handleClearAll = () => {
+    clearAllData();
+    setDocentesCargados(false);
+  };  
 
   const handleDocentesUpload = async (file: File) => {
     setDocentesLoading(true);
@@ -202,7 +209,9 @@ export default function DashboardLocalizador() {
               <div className="text-2xl font-bold text-purple-600">
                 {docentesActivos.reduce((acc, b) => acc + b.docentes.length, 0)}
               </div>
-              <div className="text-sm text-gray-600">Docentes Activos</div>
+              <div className="text-sm text-gray-600">
+                Docentes Activos Ahora
+              </div>
             </div>
             <div>
               <div className="text-2xl font-bold text-orange-600">
@@ -264,17 +273,24 @@ export default function DashboardLocalizador() {
             📁 Cargar Nuevos Horarios
           </button>
           <button
-            onClick={() => {
-              localStorage.removeItem("docentes-lista");
-              setDocentesCargados(false);
-              setUniversidad(null);
-            }}
+            onClick={() => setShowClearModal(true)}
             className="w-full sm:w-auto bg-red-500 hover:bg-red-600 text-white px-6 py-3 rounded-lg shadow-md text-lg transition duration-300"
           >
             🗑️ Limpiar Todo
           </button>
         </div>
       </div>
+
+      <ConfirmationModal
+        isOpen={showClearModal}
+        onClose={() => setShowClearModal(false)}
+        onConfirm={handleClearAll}
+        title="¿Limpiar todos los datos?"
+        message="Esta acción eliminará permanentemente todos los datos guardados incluyendo: horarios cargados, lista de docentes, encuestas realizadas y configuración de ubicación. Esta acción no se puede deshacer."
+        confirmText="Sí, eliminar todo"
+        cancelText="Cancelar"
+        danger={true}
+      />
     </div>
   );
 }
