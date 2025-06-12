@@ -15,9 +15,11 @@ import SubirHorarios from "../upload/SubirHorarios";
 import SubirDocentes from "../upload/SubirDocentes";
 import { useUniversidad } from "@/contexts/UniversidadContext";
 import ConfirmationModal from "../common/ConfirmationModal";
+import DocentesManagerModal from "./DocenteManagerModal";
 
 export default function DashboardLocalizador() {
-  const { universidad, setUniversidad, clearAllData, storageInfo } = useUniversidad();
+  const { universidad, setUniversidad, clearAllData, storageInfo } =
+    useUniversidad();
   const [currentTime, setCurrentTime] = useState(new Date());
   const [docentesActivos, setDocentesActivos] = useState<BloqueDocentes[]>([]);
   const [proximosDocentes, setProximosDocentes] = useState<BloqueDocentes[]>(
@@ -27,6 +29,7 @@ export default function DashboardLocalizador() {
   const [docentesLoading, setDocentesLoading] = useState(false);
   const [docentesCargados, setDocentesCargados] = useState(false);
   const [showClearModal, setShowClearModal] = useState(false);
+  const [showDocentesModal, setShowDocentesModal] = useState(false);
 
   // Actualizar tiempo cada minuto
   useEffect(() => {
@@ -57,7 +60,7 @@ export default function DashboardLocalizador() {
   const handleClearAll = () => {
     clearAllData();
     setDocentesCargados(false);
-  };  
+  };
 
   const handleDocentesUpload = async (file: File) => {
     setDocentesLoading(true);
@@ -267,6 +270,12 @@ export default function DashboardLocalizador() {
         {/* Botón para recargar horarios */}
         <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-center sm:gap-4 text-center">
           <button
+            onClick={() => setShowDocentesModal(true)}
+            className="w-full sm:w-auto bg-purple-500 hover:bg-purple-600 text-white px-6 py-3 rounded-lg shadow-md text-lg transition duration-300"
+          >
+            👨‍🏫 Gestionar Docentes
+          </button>
+          <button
             onClick={() => setUniversidad(null)}
             className="w-full sm:w-auto bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-lg shadow-md text-lg transition duration-300"
           >
@@ -280,6 +289,11 @@ export default function DashboardLocalizador() {
           </button>
         </div>
       </div>
+
+      <DocentesManagerModal
+        isOpen={showDocentesModal}
+        onClose={() => setShowDocentesModal(false)}
+      />
 
       <ConfirmationModal
         isOpen={showClearModal}
