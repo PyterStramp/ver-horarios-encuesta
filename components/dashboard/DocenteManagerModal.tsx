@@ -62,7 +62,7 @@ export default function DocentesManagerModal({
     window.addEventListener("resize", checkMobile);
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
-
+  
   // Extraer todos los docentes únicos del sistema
   const todosLosDocentes = useMemo(() => {
     if (!universidad) return [];
@@ -176,6 +176,68 @@ export default function DocentesManagerModal({
     return { total, encuestados, pendientes, porcentaje };
   }, [todosLosDocentes, isEncuestado]);
 
+  const handleFiltroChange = (nuevoFiltro: typeof filtroEstado) => {
+    setFiltroEstado(nuevoFiltro);
+    
+    // ✅ Verificar si el docente seleccionado sigue estando en la nueva lista filtrada
+    if (docenteSeleccionado) {
+      const filtrarConNuevoEstado = (docentes: DocenteInfo[]) => {
+        switch (nuevoFiltro) {
+          case 'encuestados':
+            return docentes.filter(d => isEncuestado(d.nombre));
+          case 'pendientes':
+            return docentes.filter(d => !isEncuestado(d.nombre));
+          default:
+            return docentes;
+        }
+      };
+
+      // Obtener la nueva lista filtrada
+      let nuevaListaFiltrada = todosLosDocentes;
+      
+      // Aplicar filtro de búsqueda si existe
+      if (busqueda.trim()) {
+        const termino = busqueda.toLowerCase().trim();
+        nuevaListaFiltrada = nuevaListaFiltrada.filter(docente => 
+          docente.nombre.toLowerCase().includes(termino) ||
+          docente.materias.some(materia => materia.toLowerCase().includes(termino))
+        );
+      }
+      
+      // Aplicar filtro de estado
+      nuevaListaFiltrada = filtrarConNuevoEstado(nuevaListaFiltrada);
+      
+      // ✅ Si el docente seleccionado no está en la nueva lista, limpiar selección
+      const docenteSigueEnLista = nuevaListaFiltrada.some(d => d.nombre === docenteSeleccionado);
+      if (!docenteSigueEnLista) {
+        setDocenteSeleccionado(null);
+        console.log(`🔄 Docente "${docenteSeleccionado}" no está en el filtro "${nuevoFiltro}", limpiando selección`);
+      }
+    }
+  };
+
+  // ✅ Función mejorada para cambiar búsqueda con validación
+  const handleBusquedaChange = (nuevaBusqueda: string) => {
+    setBusqueda(nuevaBusqueda);
+    
+    // ✅ Verificar si el docente seleccionado sigue estando en los resultados de búsqueda
+    if (docenteSeleccionado && nuevaBusqueda.trim()) {
+      const termino = nuevaBusqueda.toLowerCase().trim();
+      const docenteActual = todosLosDocentes.find(d => d.nombre === docenteSeleccionado);
+      
+      if (docenteActual) {
+        const coincideBusqueda = 
+          docenteActual.nombre.toLowerCase().includes(termino) ||
+          docenteActual.materias.some(materia => materia.toLowerCase().includes(termino));
+        
+        if (!coincideBusqueda) {
+          setDocenteSeleccionado(null);
+          console.log(`🔍 Docente "${docenteSeleccionado}" no coincide con la búsqueda, limpiando selección`);
+        }
+      }
+    }
+  };  
+
   if (!isOpen) return null;
 
   return (
@@ -224,7 +286,7 @@ export default function DocentesManagerModal({
                     type="text"
                     placeholder="Buscar por nombre o materia..."
                     value={busqueda}
-                    onChange={(e) => setBusqueda(e.target.value)}
+                    onChange={(e) => handleBusquedaChange(e.target.value)}
                     className="w-full pl-10 pr-4 py-2 md:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm md:text-base"
                   />
                   <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
@@ -249,7 +311,7 @@ export default function DocentesManagerModal({
               {/* Filtros - Responsive grid */}
               <div className="grid grid-cols-3 gap-2 md:flex md:gap-2">
                 <button
-                  onClick={() => setFiltroEstado("todos")}
+                  onClick={() => handleFiltroChange('todos')}
                   className={`px-2 py-2 md:px-4 rounded-lg text-xs md:text-sm transition-colors truncate ${
                     filtroEstado === "todos"
                       ? "bg-blue-500 text-white"
@@ -259,7 +321,7 @@ export default function DocentesManagerModal({
                   Todos ({stats.total})
                 </button>
                 <button
-                  onClick={() => setFiltroEstado("pendientes")}
+                  onClick={() => handleFiltroChange('pendientes')}
                   className={`px-2 py-2 md:px-4 rounded-lg text-xs md:text-sm transition-colors truncate ${
                     filtroEstado === "pendientes"
                       ? "bg-red-500 text-white"
@@ -269,7 +331,7 @@ export default function DocentesManagerModal({
                   Pendientes ({stats.pendientes})
                 </button>
                 <button
-                  onClick={() => setFiltroEstado("encuestados")}
+                  onClick={() => handleFiltroChange("encuestados")}
                   className={`px-2 py-2 md:px-4 rounded-lg text-xs md:text-sm transition-colors truncate ${
                     filtroEstado === "encuestados"
                       ? "bg-green-500 text-white"
@@ -317,9 +379,9 @@ export default function DocentesManagerModal({
                   className="w-full bg-gray-100 hover:bg-gray-200 px-4 py-3 rounded-lg flex items-center justify-between transition-colors"
                 >
                   <span className="font-medium text-gray-800">
-                    {docenteSeleccionado
-                      ? docenteSeleccionado
-                      : "Seleccionar docente"}
+                    {docenteSeleccionado && docentesFiltrados.some(d => d.nombre === docenteSeleccionado)
+                      ? docenteSeleccionado 
+                      : 'Seleccionar docente'}
                   </span>
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
